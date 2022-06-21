@@ -7,7 +7,7 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 public class WeatherBot extends TelegramLongPollingBot {
     private String token;
     private String username;
-
+    private WeatherGateway gate;
     public WeatherBot(){
 
     }
@@ -25,12 +25,14 @@ public class WeatherBot extends TelegramLongPollingBot {
     @Override
     public void onUpdateReceived(Update update) {
         if (update.hasMessage() && update.getMessage().hasText()) {
+
             String message_text = update.getMessage().getText();
             long chat_id = update.getMessage().getChatId();
-
+            double[] cord =  gate.getLatLonByCityName(message_text);
+            String res = gate.getWeatherByLatLong(cord[0], cord[1]);
             SendMessage message = new SendMessage();
             message.setChatId(String.valueOf(chat_id));
-            message.setText(message_text);
+            message.setText(res);
 
             try {
                 execute(message);
@@ -47,5 +49,13 @@ public class WeatherBot extends TelegramLongPollingBot {
     @JsonSetter("username")
     public void setUsername(String username) {
         this.username = username;
+    }
+
+    public WeatherGateway getGate() {
+        return gate;
+    }
+
+    public void setGate(WeatherGateway gate) {
+        this.gate = gate;
     }
 }

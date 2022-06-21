@@ -1,4 +1,7 @@
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
 import org.telegram.telegrambots.meta.TelegramBotsApi;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiRequestException;
@@ -10,9 +13,12 @@ import java.nio.file.Paths;
 public class main {
     public static void main(String args[]) throws IOException, TelegramApiException {
         ObjectMapper mapper = new ObjectMapper();
-        WeatherBot bot = mapper.readValue(Paths.get("cred.json").toFile(), WeatherBot.class);
+        WeatherGateway gate = mapper.readValue(Paths.get("cfg/openw.json").toFile(), WeatherGateway.class);
+        WeatherBot bot = mapper.readValue(Paths.get("cfg/cred.json").toFile(), WeatherBot.class);
+        bot.setGate(gate);
         TelegramBotsApi botsApi = new TelegramBotsApi(DefaultBotSession.class);
         botsApi.registerBot(bot);
+
 
     }
 }
