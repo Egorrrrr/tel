@@ -33,31 +33,65 @@ public class WeatherBot extends TelegramLongPollingBot implements IUpdater {
 
     @Override
     public void onUpdateReceived(Update update) {
+        SendMessage message = new SendMessage();
+        if(update.hasCallbackQuery()){
+            String callback_username = update.getCallbackQuery().getFrom().getUserName();
+            message.setChatId(String.valueOf(update.getCallbackQuery().getMessage().getChatId()));
+            if(userStateMap.get(callback_username) == "unsub"){
+
+                message.setText(subHandler.handleUnSubscription(update));
+
+
+            }
+            if(userStateMap.get(callback_username) == "sub"){
+                message.setText(subHandler.handleSubscription(update));
+            }
+            try {
+                execute(message);
+            } catch (TelegramApiException e) {
+                e.printStackTrace();
+            }
+            return;
+        }
+
+        String chat_id = String.valueOf(update.getMessage().getChatId());
+        message.setChatId(String.valueOf(chat_id));
+        if(update.getMessage().getLocation() != null){
+                City city = new City();
+                try {
+                    city.setLat(update.getMessage().getLocation().getLatitude());
+                    city.setLon(update.getMessage().getLocation().getLongitude());
+                }
+                catch (Exception e){
+                    e.printStackTrace();
+                }
+                message.setText(gate.getWeatherByCity(city));
+                try {
+                    execute(message);
+                } catch (TelegramApiException e) {
+                    e.printStackTrace();
+                }
+                return;
+        }
         if (update.hasMessage() && update.getMessage().hasText()) {
             String message_text = update.getMessage().getText();
-            String chat_id = String.valueOf(update.getMessage().getChatId());
+
             String sender_username = update.getMessage().getFrom().getUserName();
             if(!userStateMap.containsKey(sender_username)){
                 userStateMap.put(sender_username,"default");
             }
 
-            SendMessage message = new SendMessage();
-            message.setChatId(String.valueOf(chat_id));
 
+
+            if(message_text.startsWith("/me")) {
+
+            }
             if(message_text.startsWith("/subscribe")) {
                 userStateMap.put(sender_username, "sub");
-                String ans = new String("Введите имя города.\nЧтобы отказаться введите exit".getBytes(), StandardCharsets.UTF_8);
-                message.setText(ans);
+                message = subHandler.createSubMarkup(update);
             }
             if(message_text.startsWith("/unsubscribe")) {
-                userStateMap.put(sender_username, "unsub");
-                StringBuilder sb = new StringBuilder();
-                ArrayList<City> city_array = userSubscriptionList.get(String.valueOf(chat_id));
-                for (int i = 0; i < city_array.stream().count(); i++){
-                    sb.append(String.format("%d. %s\n", i+1, city_array.get(i).getName()));
-                }
-                String ans = new String((sb + "\nВведите номер города, от которого хотите отписаться.\nЧтобы отказаться введите exit").getBytes(), StandardCharsets.UTF_8);
-                message.setText(ans);
+                message = subHandler.createUnsubMarkUp(update);
             }
             if(message_text.startsWith("/start")){
                 String ans = new String(String.format("Добро пожаловать в погодный бот, %s.\nЧтобы узнать погоду, введите название, интерсуещего вас, города", sender_username).getBytes(), StandardCharsets.UTF_8);
@@ -65,7 +99,8 @@ public class WeatherBot extends TelegramLongPollingBot implements IUpdater {
             }
             if(!message_text.startsWith("/")){
                 if(userStateMap.get(sender_username) == "default"){
-                    message.setText(getWeather(message_text));
+
+                        message.setText(getWeather(message_text));
                 }
                 if(userStateMap.get(sender_username) == "sub"){
                     message.setText(subHandler.handleSubscription(update));

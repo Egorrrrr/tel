@@ -55,9 +55,9 @@ public class WeatherGateway {
             String jsonString = new String((byte[])result);
             JSONObject json = new JSONObject(jsonString);
             String res_string = new String(String.format("%s, %s, %s | Температура: %.1f, %s",
-                    city.getName(),
-                    city.getState(),
-                    city.getCountry(),
+                    city.getName() != null ? city.getName() : json.getString("name"),
+                    city.getState() != null ? city.getState() : city.getName() != null ? city.getName() : json.get("name"),
+                    city.getCountry() != null ? city.getCountry() : json.getJSONObject("sys").getString("country"),
                     json.getJSONObject("main").getDouble("temp"),
                     json.getJSONArray("weather").getJSONObject(0).getString("description")).getBytes(), StandardCharsets.UTF_8);
             return res_string;
