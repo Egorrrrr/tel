@@ -1,9 +1,11 @@
 import com.fasterxml.jackson.annotation.JsonSetter;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
+import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
+import java.lang.invoke.SwitchPoint;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -33,74 +35,70 @@ public class WeatherBot extends TelegramLongPollingBot implements IUpdater {
 
     @Override
     public void onUpdateReceived(Update update) {
+
+        UserEvent event = new UserEvent(update);
+
+        String sender_username = event.getName();
+        String chat_id = event.getChat_id();
+        String message_text = event.getMessage();
+        MessageType type = event.getType();
+
         SendMessage message = new SendMessage();
-        if(update.hasCallbackQuery()){
-            String callback_username = update.getCallbackQuery().getFrom().getUserName();
-            message.setChatId(String.valueOf(update.getCallbackQuery().getMessage().getChatId()));
-            if(userStateMap.get(callback_username) == "unsub"){
+        message.setChatId(String.valueOf(chat_id));
 
-                message.setText(subHandler.handleUnSubscription(update));
-
-
-            }
-            if(userStateMap.get(callback_username) == "sub"){
-                message.setText(subHandler.handleSubscription(update));
-            }
-            try {
-                execute(message);
-            } catch (TelegramApiException e) {
-                e.printStackTrace();
-            }
-            return;
+        if(!userStateMap.containsKey(sender_username)){
+            userStateMap.put(sender_username,"default");
         }
 
-        String chat_id = String.valueOf(update.getMessage().getChatId());
-        message.setChatId(String.valueOf(chat_id));
-        if(update.getMessage().getLocation() != null){
+        switch (type){
+            case CALLBACK:
+                AnswerCallbackQuery ans_callback = new AnswerCallbackQuery();
+                ans_callback.setCallbackQueryId(update.getCallbackQuery().getId());
+
+
+                if(userStateMap.get(sender_username) == "default"){
+                    return;
+                }
+                if(userStateMap.get(sender_username) == "unsub"){
+                    message.setText(subHandler.handleUnSubscription(update));
+                }
+                if(userStateMap.get(sender_username) == "sub"){
+                    message.setText(subHandler.handleSubscription(update));
+                }
+                try {
+                    execute(ans_callback);
+                } catch (TelegramApiException e) {
+                    e.printStackTrace();
+                }
+                break;
+            case LOCATION:
                 City city = new City();
                 try {
-                    city.setLat(update.getMessage().getLocation().getLatitude());
-                    city.setLon(update.getMessage().getLocation().getLongitude());
+                    city.setLat(event.getLat());
+                    city.setLon(event.getLon());
                 }
                 catch (Exception e){
                     e.printStackTrace();
                 }
                 message.setText(gate.getWeatherByCity(city));
-                try {
-                    execute(message);
-                } catch (TelegramApiException e) {
-                    e.printStackTrace();
+                break;
+            case COMMAND:
+                if(message_text.startsWith("/subscribe")) {
+                    userStateMap.put(sender_username, "sub");
+                    message = subHandler.createSubMarkup(update);
                 }
-                return;
-        }
-        if (update.hasMessage() && update.getMessage().hasText()) {
-            String message_text = update.getMessage().getText();
-
-            String sender_username = update.getMessage().getFrom().getUserName();
-            if(!userStateMap.containsKey(sender_username)){
-                userStateMap.put(sender_username,"default");
-            }
-
-
-
-            if(message_text.startsWith("/me")) {
-
-            }
-            if(message_text.startsWith("/subscribe")) {
-                userStateMap.put(sender_username, "sub");
-                message = subHandler.createSubMarkup(update);
-            }
-            if(message_text.startsWith("/unsubscribe")) {
-                message = subHandler.createUnsubMarkUp(update);
-            }
-            if(message_text.startsWith("/start")){
-                String ans = new String(String.format("Добро пожаловать в погодный бот, %s.\nЧтобы узнать погоду, введите название, интерсуещего вас, города", sender_username).getBytes(), StandardCharsets.UTF_8);
-                message.setText(ans);
-            }
-            if(!message_text.startsWith("/")){
+                if(message_text.startsWith("/unsubscribe")) {
+                    message = subHandler.createUnsubMarkUp(update);
+                }
+                if(message_text.startsWith("/start")){
+                    String ans = new String(String.format("Добро пожаловать в погодный бот, %s.\nЧтобы узнать погоду, введите название, интерсуещего вас, города", sender_username).getBytes(), StandardCharsets.UTF_8);
+                    message.setText(ans);
+                }
+                break;
+            case TEXT:
                 if(userStateMap.get(sender_username) == "default"){
 
-                        message.setText(getWeather(message_text));
+                    message.setText(getWeather(message_text));
                 }
                 if(userStateMap.get(sender_username) == "sub"){
                     message.setText(subHandler.handleSubscription(update));
@@ -108,14 +106,16 @@ public class WeatherBot extends TelegramLongPollingBot implements IUpdater {
                 if(userStateMap.get(sender_username) == "unsub"){
                     message.setText(subHandler.handleUnSubscription(update));
                 }
-            }
-            try {
-                execute(message);
-            } catch (TelegramApiException e) {
-                e.printStackTrace();
-            }
+            break;
+        }
+        try {
+            execute(message);
+        } catch (TelegramApiException e) {
+            e.printStackTrace();
         }
     }
+
+
 
     private String getWeather(String city_name){
         City city =  gate.getCityByName(city_name);
