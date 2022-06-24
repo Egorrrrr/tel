@@ -1,10 +1,11 @@
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 public class WeatherUpdater implements Runnable {
-    IUpdater updater;
-    public WeatherUpdater(IUpdater updater){
+    private IUpdater updater;
+    private UserStorage userStorage;
+    public WeatherUpdater(IUpdater updater, UserStorage userStorage){
         this.updater = updater;
-
+        this.userStorage = userStorage;
     }
     @Override
     public void run() {

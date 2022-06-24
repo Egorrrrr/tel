@@ -10,12 +10,13 @@ import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class SubscriptionHandler {
     private HashMap<String, String> userStateMap;
-    private HashMap<String, ArrayList<City>> userSubscriptionList;
+    private ConcurrentHashMap<String, ArrayList<City>> userSubscriptionList;
 
-    public SubscriptionHandler(HashMap<String, String> userStateMap, HashMap<String, ArrayList<City>> userSubscriptionList, WeatherGateway gate) {
+    public SubscriptionHandler(HashMap<String, String> userStateMap, ConcurrentHashMap<String, ArrayList<City>> userSubscriptionList, WeatherGateway gate) {
         this.userStateMap = userStateMap;
         this.userSubscriptionList = userSubscriptionList;
         this.gate = gate;
@@ -53,7 +54,7 @@ public class SubscriptionHandler {
                     userSubscriptionList.get(chat_id).add(city);
                 }
                 userStateMap.put(sender_username, "default");
-                output = new String(("Вы подписалиь на обновления по: " + city.getName()).getBytes(), StandardCharsets.UTF_8);
+                output = new String(("Вы подписалиcь на обновления по: " + city.getName()).getBytes(), StandardCharsets.UTF_8);
 
 
             }

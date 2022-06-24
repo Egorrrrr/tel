@@ -56,8 +56,8 @@ public class WeatherGateway {
             JSONObject json = new JSONObject(jsonString);
             city.setLon(lon);
             city.setLat(lat);
-            city.setCountry(json.getJSONObject("sys").getString("country"));
-            city.setName(json.getString("name"));
+            city.setCountry(json.getJSONObject("sys").has("country") ? json.getJSONObject("sys").getString("country") : "Unknown Location");
+            city.setName(json.getString("name").equals("") ? "Unknown" : json.getString("name"));
             return city;
         } catch (IOException e) {
             e.printStackTrace();
@@ -73,10 +73,12 @@ public class WeatherGateway {
             Object result = client.execute(request, httpResponse -> httpResponse.getEntity().getContent().readAllBytes());
             String jsonString = new String((byte[])result);
             JSONObject json = new JSONObject(jsonString);
+            String w_city_name = json.getString("name");
+            w_city_name  = w_city_name.equals("") ? "Unknown" : w_city_name;
             String res_string = new String(String.format("%s, %s, %s\nТемпература: %.1f, %s\nДавление: %s\nВлажность: %s%%",
-                    city.getName() != null ? city.getName() : json.getString("name"),
-                    city.getState() != null ? city.getState() : city.getName() != null ? city.getName() : json.get("name"),
-                    city.getCountry() != null ? city.getCountry() : json.getJSONObject("sys").getString("country"),
+                    city.getName() != null ? city.getName() : w_city_name,
+                    city.getState() != null ? city.getState() : city.getName() != null ? city.getName() : w_city_name,
+                    city.getCountry() != null ? city.getCountry() : json.getJSONObject("sys").has("country") ? json.getJSONObject("sys").getString("country") : "Unknown Location" ,
                     json.getJSONObject("main").getDouble("temp"),
                     json.getJSONArray("weather").getJSONObject(0).getString("description"),
                     json.getJSONObject("main").getDouble("pressure"),

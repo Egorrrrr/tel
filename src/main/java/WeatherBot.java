@@ -9,17 +9,28 @@ import java.lang.invoke.SwitchPoint;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class WeatherBot extends TelegramLongPollingBot implements IUpdater {
     private String token;
     private String username;
     private WeatherGateway gate;
+
     private HashMap<String, String> userStateMap;
-    private HashMap<String, ArrayList<City>> userSubscriptionList;
-    SubscriptionHandler subHandler;
+    private ConcurrentHashMap<String, ArrayList<City>> userSubscriptionList;
+    private SubscriptionHandler subHandler;
+
+    public void setUserStorage(UserStorage userStorage) {
+        userSubscriptionList = userStorage.getUserSubscriptionList();
+    }
+
     public WeatherBot(){
         userStateMap = new HashMap<>();
-        userSubscriptionList = new HashMap<>();
+        userSubscriptionList = new ConcurrentHashMap<>();
+    }
+
+    public WeatherBot(UserStorage userStorage){
+        userStateMap = new HashMap<>();
 
     }
 
