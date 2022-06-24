@@ -46,8 +46,13 @@ public class WeatherBot extends TelegramLongPollingBot implements IUpdater {
         SendMessage message = new SendMessage();
         message.setChatId(String.valueOf(chat_id));
 
+        String user_state = "";
         if(!userStateMap.containsKey(sender_username)){
             userStateMap.put(sender_username,"default");
+            user_state = "default";
+        }
+        else {
+            user_state = userStateMap.get(sender_username);
         }
 
         switch (type){
@@ -56,13 +61,14 @@ public class WeatherBot extends TelegramLongPollingBot implements IUpdater {
                 ans_callback.setCallbackQueryId(update.getCallbackQuery().getId());
 
 
-                if(userStateMap.get(sender_username) == "default"){
+                if(user_state == "default"){
                     return;
                 }
-                if(userStateMap.get(sender_username) == "unsub"){
+                if(user_state == "unsub"){
                     message.setText(subHandler.handleUnSubscription(update));
                 }
-                if(userStateMap.get(sender_username) == "sub"){
+                else
+                if(user_state == "sub"){
                     message.setText(subHandler.handleSubscription(update));
                 }
                 try {
@@ -72,38 +78,45 @@ public class WeatherBot extends TelegramLongPollingBot implements IUpdater {
                 }
                 break;
             case LOCATION:
-                City city = new City();
-                try {
+
+                City city;
+                if(user_state == "sub"){
+                    city = gate.getCityByCord(event.getLat(), event.getLon());
+                    message.setText(subHandler.handleSubscription(update,city));
+                }
+                else{
+                    city = new City();
                     city.setLat(event.getLat());
                     city.setLon(event.getLon());
+                    message.setText(gate.getWeatherByCity(city));
                 }
-                catch (Exception e){
-                    e.printStackTrace();
-                }
-                message.setText(gate.getWeatherByCity(city));
                 break;
             case COMMAND:
                 if(message_text.startsWith("/subscribe")) {
                     userStateMap.put(sender_username, "sub");
                     message = subHandler.createSubMarkup(update);
                 }
+                else
                 if(message_text.startsWith("/unsubscribe")) {
                     message = subHandler.createUnsubMarkUp(update);
                 }
+                else
                 if(message_text.startsWith("/start")){
                     String ans = new String(String.format("Добро пожаловать в погодный бот, %s.\nЧтобы узнать погоду, введите название, интерсуещего вас, города", sender_username).getBytes(), StandardCharsets.UTF_8);
                     message.setText(ans);
                 }
                 break;
             case TEXT:
-                if(userStateMap.get(sender_username) == "default"){
+                if(user_state == "default"){
 
                     message.setText(getWeather(message_text));
                 }
-                if(userStateMap.get(sender_username) == "sub"){
+                else
+                if(user_state == "sub"){
                     message.setText(subHandler.handleSubscription(update));
                 }
-                if(userStateMap.get(sender_username) == "unsub"){
+                else
+                if(user_state == "unsub"){
                     message.setText(subHandler.handleUnSubscription(update));
                 }
             break;

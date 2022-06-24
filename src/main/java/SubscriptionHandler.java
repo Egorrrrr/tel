@@ -24,8 +24,10 @@ public class SubscriptionHandler {
     private WeatherGateway gate;
 
 
-
-    public String handleSubscription(Update update){
+    public String  handleSubscription(Update update){
+        return handleSubscription(update, null);
+    }
+    public String handleSubscription(Update update, City city){
         String output = "";
         if(update.hasCallbackQuery()){
             if(update.getCallbackQuery().getData().equals("exit")){
@@ -40,29 +42,25 @@ public class SubscriptionHandler {
         String chat_id = String.valueOf(update.getMessage().getChatId());
 
         if(userStateMap.get(sender_username) == "sub"){
-            if(!message_text.equals("exit")) {
-                City city = gate.getCityByName(message_text);
-                if(city != null) {
-                    if(!userSubscriptionList.containsKey(chat_id)) {
-                        ArrayList<City> sub_list = new ArrayList<>();
-                        sub_list.add(city);
-                        userSubscriptionList.put(String.valueOf(chat_id), sub_list);
-                    }
-                    else {
-                        userSubscriptionList.get(chat_id).add(city);
-                    }
-                    userStateMap.put(sender_username, "default");
-                    output = new String(("Вы подписалиь на обновления по: " + city.getName()).getBytes(), StandardCharsets.UTF_8);
-
-
+            city = city == null ? gate.getCityByName(message_text) : city;
+            if(city != null) {
+                if(!userSubscriptionList.containsKey(chat_id)) {
+                    ArrayList<City> sub_list = new ArrayList<>();
+                    sub_list.add(city);
+                    userSubscriptionList.put(String.valueOf(chat_id), sub_list);
                 }
                 else {
-                    output = new String("Город не найден, попробуйте еще раз".getBytes(), StandardCharsets.UTF_8);
+                    userSubscriptionList.get(chat_id).add(city);
                 }
-            }
-            else{
+                userStateMap.put(sender_username, "default");
+                output = new String(("Вы подписалиь на обновления по: " + city.getName()).getBytes(), StandardCharsets.UTF_8);
+
 
             }
+            else {
+                output = new String("Город не найден, попробуйте еще раз".getBytes(), StandardCharsets.UTF_8);
+            }
+
         }
         return output;
     }

@@ -23,6 +23,7 @@ public class WeatherGateway {
 
     public City getCityByName(String name){
         try (CloseableHttpClient client = HttpClients.createDefault()) {
+            name = name.replaceAll(" ","-");
             String url = String.format("http://api.openweathermap.org/geo/1.0/direct?q=%s&limit=5&appid=%s", name, token);
             HttpGet request = new HttpGet(url);
             Object result = client.execute(request, httpResponse -> httpResponse.getEntity().getContent().readAllBytes());
@@ -45,6 +46,24 @@ public class WeatherGateway {
         }
     }
 
+    public City getCityByCord(double lat, double lon){
+        City city = new City();
+        try (CloseableHttpClient client = HttpClients.createDefault()) {
+            String url = String.format("https://api.openweathermap.org/data/2.5/weather?lat=%f&lon=%f&units=metric&appid=%s", lat, lon, token);
+            HttpGet request = new HttpGet(url);
+            Object result = client.execute(request, httpResponse -> httpResponse.getEntity().getContent().readAllBytes());
+            String jsonString = new String((byte[])result);
+            JSONObject json = new JSONObject(jsonString);
+            city.setLon(lon);
+            city.setLat(lat);
+            city.setCountry(json.getJSONObject("sys").getString("country"));
+            city.setName(json.getString("name"));
+            return city;
+        } catch (IOException e) {
+            e.printStackTrace();
+            return city;
+        }
+    }
 
     public String getWeatherByCity(City city){
 
@@ -54,12 +73,15 @@ public class WeatherGateway {
             Object result = client.execute(request, httpResponse -> httpResponse.getEntity().getContent().readAllBytes());
             String jsonString = new String((byte[])result);
             JSONObject json = new JSONObject(jsonString);
-            String res_string = new String(String.format("%s, %s, %s | Температура: %.1f, %s",
+            String res_string = new String(String.format("%s, %s, %s\nТемпература: %.1f, %s\nДавление: %s\nВлажность: %s%%",
                     city.getName() != null ? city.getName() : json.getString("name"),
                     city.getState() != null ? city.getState() : city.getName() != null ? city.getName() : json.get("name"),
                     city.getCountry() != null ? city.getCountry() : json.getJSONObject("sys").getString("country"),
                     json.getJSONObject("main").getDouble("temp"),
-                    json.getJSONArray("weather").getJSONObject(0).getString("description")).getBytes(), StandardCharsets.UTF_8);
+                    json.getJSONArray("weather").getJSONObject(0).getString("description"),
+                    json.getJSONObject("main").getDouble("pressure"),
+                    json.getJSONObject("main").getDouble("humidity")).getBytes(), StandardCharsets.UTF_8);
+
             return res_string;
 
         } catch (IOException e) {
