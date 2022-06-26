@@ -79,6 +79,7 @@ public class SubscriptionHandler {
         String output = "";
         if (message_text.equals("exit")){
             output = new String("Вы вышли из режима отписки ".getBytes(), StandardCharsets.UTF_8);
+            userStateMap.put(callback_username, "default");
             return output;
         }
         ArrayList<City> city_array = (ArrayList<City>) userSubscriptionList.get(String.valueOf(chat_id)).getCities();
@@ -116,6 +117,7 @@ public class SubscriptionHandler {
         if(city_array.isEmpty()){
             message.setChatId(chat_id);
             message.setText(new String("У вас нет подписок".getBytes(), StandardCharsets.UTF_8));
+            userStateMap.put(sender_username, "default");
             return message;
         }
         InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
