@@ -1,5 +1,9 @@
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
+import java.time.LocalTime;
+import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
+
 public class WeatherUpdater implements Runnable {
     private IUpdater updater;
     private UserStorage userStorage;
@@ -9,14 +13,29 @@ public class WeatherUpdater implements Runnable {
     }
     @Override
     public void run() {
+        ConcurrentHashMap<String, Subscription> map = userStorage.getUserSubscriptionList();
         while(true){
             try {
-                updater.update();
+                for (String user: map.keySet()
+                     ) {
+                    Subscription sub = map.get(user);
+                    int y = LocalTime.now().getHour();
+                    if(sub.getCities().isEmpty()){
+                        break;
+                    }
+                    if(sub.getTime()== LocalTime.now().getHour() && !sub.isSent()){
+                        updater.update(user, sub.getCities());
+                        sub.setSent(true);
+                    }
+                    else if(sub.getTime() != LocalTime.now().getHour() && sub.isSent()){
+                        sub.setSent(false);
+                    }
+                }
             } catch (TelegramApiException e) {
                 e.printStackTrace();
             }
             try {
-                Thread.sleep(1000 * 60);
+                Thread.sleep(1000 * 5);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }

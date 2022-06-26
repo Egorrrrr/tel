@@ -8,6 +8,8 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.util.HashMap;
@@ -24,8 +26,9 @@ public class WeatherGateway {
     public City getCityByName(String name){
         try (CloseableHttpClient client = HttpClients.createDefault()) {
             name = name.replaceAll(" ","-");
-            String url = String.format("http://api.openweathermap.org/geo/1.0/direct?q=%s&limit=5&appid=%s", name, token);
+            String url = String.format("http://api.openweathermap.org/geo/1.0/direct?q=%s&limit=5&appid=%s", URLEncoder.encode(name, StandardCharsets.UTF_8), token);
             HttpGet request = new HttpGet(url);
+
             Object result = client.execute(request, httpResponse -> httpResponse.getEntity().getContent().readAllBytes());
             String jsonString = new String((byte[])result);
             if(jsonString.equals("[]")){
@@ -43,6 +46,12 @@ public class WeatherGateway {
         } catch (IOException e) {
             e.printStackTrace();
             return null;
+
+        }
+        catch (Exception e){
+            e.printStackTrace();
+            return null;
+
         }
     }
 
@@ -60,6 +69,10 @@ public class WeatherGateway {
             city.setName(json.getString("name").equals("") ? "Unknown" : json.getString("name"));
             return city;
         } catch (IOException e) {
+            e.printStackTrace();
+            return city;
+        }
+        catch (Exception e){
             e.printStackTrace();
             return city;
         }
@@ -89,7 +102,13 @@ public class WeatherGateway {
         } catch (IOException e) {
             e.printStackTrace();
             return "";
+
         }
+        catch (Exception e){
+            e.printStackTrace();
+            return "";
+        }
+
     }
     public String getToken() {
         return token;

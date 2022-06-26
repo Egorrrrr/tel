@@ -2,6 +2,8 @@ import com.fasterxml.jackson.annotation.JsonSetter;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageReplyMarkup;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
@@ -9,6 +11,7 @@ import java.lang.invoke.SwitchPoint;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class WeatherBot extends TelegramLongPollingBot implements IUpdater {
@@ -17,7 +20,7 @@ public class WeatherBot extends TelegramLongPollingBot implements IUpdater {
     private WeatherGateway gate;
 
     private HashMap<String, String> userStateMap;
-    private ConcurrentHashMap<String, ArrayList<City>> userSubscriptionList;
+    private ConcurrentHashMap<String, Subscription> userSubscriptionList;
     private SubscriptionHandler subHandler;
 
     public void setUserStorage(UserStorage userStorage) {
@@ -70,20 +73,52 @@ public class WeatherBot extends TelegramLongPollingBot implements IUpdater {
             case CALLBACK:
                 AnswerCallbackQuery ans_callback = new AnswerCallbackQuery();
                 ans_callback.setCallbackQueryId(update.getCallbackQuery().getId());
-
-
-                if(user_state == "default"){
+                try {
+                    execute(ans_callback);
+                } catch (TelegramApiException e) {
+                    e.printStackTrace();
+                }
+                DeleteMessage del = new DeleteMessage();
+                del.setChatId(event.getChat_id());
+                del.setMessageId(update.getCallbackQuery().getMessage().getMessageId());
+                if(user_state.equals("default")){
                     return;
                 }
-                if(user_state == "unsub"){
+                if(user_state.equals("unsub")){
                     message.setText(subHandler.handleUnSubscription(update));
                 }
                 else
-                if(user_state == "sub"){
+                if(user_state.equals("sub")){
                     message.setText(subHandler.handleSubscription(update));
                 }
+                if(user_state.equals("time")){
+                    if(message_text.equals(">") || message_text.equals("<")){
+                        EditMessageReplyMarkup edit = subHandler.changeTimeMarkup(update);
+                        try {
+                            if(edit!=null){
+                                execute(edit);
+                            }
+                            return;
+                        } catch (TelegramApiException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                    else if(message_text.equals("exit") ){
+                        userStateMap.put(sender_username, "default");
+                        message.setText(new String("Вы вышли из режима установки времени".getBytes(),StandardCharsets.UTF_8));
+                    }
+                    else {
+                        message.setText(subHandler.SetSubTime(chat_id, Integer.parseInt(message_text)));
+                        userStateMap.put(sender_username, "default");
+                    }
+
+                }
                 try {
-                    execute(ans_callback);
+                    execute(del);
+                    if(message.getText() != null){
+                        execute(message);
+                        return;
+                    }
                 } catch (TelegramApiException e) {
                     e.printStackTrace();
                 }
@@ -115,6 +150,12 @@ public class WeatherBot extends TelegramLongPollingBot implements IUpdater {
                 if(message_text.startsWith("/start")){
                     String ans = new String(String.format("Добро пожаловать в погодный бот, %s.\nЧтобы узнать погоду, введите название, интерсуещего вас, города", sender_username).getBytes(), StandardCharsets.UTF_8);
                     message.setText(ans);
+                }
+                else
+                if(message_text.startsWith("/settime")){
+                    if(user_state == "default"){
+                        message = subHandler.createTimeMarkup(update);
+                    }
                 }
                 break;
             case TEXT:
@@ -172,19 +213,15 @@ public class WeatherBot extends TelegramLongPollingBot implements IUpdater {
     }
 
     @Override
-    public void update() throws TelegramApiException {
+    public void update(String chat_id, List<City> cities) throws TelegramApiException {
 
-        for (String chat_id: userSubscriptionList.keySet()
+        for (City city: cities
              ) {
-            for (City city: userSubscriptionList.get(chat_id)
-                 ) {
-                String forecast = gate.getWeatherByCity(city);
-                SendMessage message = new SendMessage();
-                message.setChatId(chat_id);
-                message.setText(forecast);
-                execute(message);
-            }
-
+            String forecast = gate.getWeatherByCity(city);
+            SendMessage message = new SendMessage();
+            message.setChatId(chat_id);
+            message.setText(forecast);
+            execute(message);
         }
 
     }
