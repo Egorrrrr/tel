@@ -147,7 +147,7 @@ public class SubscriptionHandler {
             sub.setTime(time);
             userSubscriptionList.put(chat_id, sub);
         }
-        return new String(("Ваше вермя пописки изменно на: " + time).getBytes(), StandardCharsets.UTF_8);
+        return new String(("Ваше время подписки измененно на: " + time).getBytes(), StandardCharsets.UTF_8);
     }
     public EditMessageReplyMarkup changeTimeMarkup(Update update){
         String chat_id = String.valueOf(update.getCallbackQuery().getMessage().getChatId());
